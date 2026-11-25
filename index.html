@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duty Roster</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eee;font-family:Arial,"Noto Sans Bengali",sans-serif;color:#111}
+.toolbar{position:sticky;top:0;background:#fff;padding:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #bbb;z-index:2}
+button,input,select{font:inherit;padding:7px;border:1px solid #777;border-radius:4px;background:white}
+.sheet{background:white;margin:12px auto;padding:12px;width:min(100%,1200px);overflow-x:auto}
+h2,h3,p{text-align:center;margin:4px}h2{font-size:20px}h3{font-size:16px}
+table{border-collapse:collapse;width:100%;min-width:900px;table-layout:fixed;font-size:11px}
+th,td{border:1px solid #222;text-align:center;padding:3px 1px;height:25px}
+thead th{font-weight:700}th.staff,td.staff{width:112px}th.sl,td.sl{width:22px}td.staff{text-align:left;padding-left:5px;font-weight:bold}
+td.duty{cursor:pointer}td.duty:focus{outline:2px solid #2875d8;background:#eaf3ff}
+.note{border:1px solid #222;margin-top:12px;padding:8px;min-height:72px;font-weight:bold;font-size:12px}
+.signs{display:flex;justify-content:space-around;margin-top:48px;font-weight:bold}
+.signs span{border-top:1px solid #333;padding-top:4px;min-width:95px;text-align:center}
+@media(max-width:600px){.sheet{margin:0;padding:7px}h2{font-size:17px}h3{font-size:14px}}
+@media print{.toolbar{display:none}.sheet{width:100%;margin:0;padding:5px}body{background:white}table{font-size:8px}.note{min-height:55px}}
+</style>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#ffffff"><link rel="icon" href="icon.svg" type="image/svg+xml"></head>
+<body>
+<div class="toolbar">
+<label>মাস: <input id="month" type="month" value="2026-11"></label>
+<button onclick="addStaff()">+ স্টাফ</button>
+<button onclick="saveRoster()">Save</button>
+<button onclick="window.print()">PDF / Print</button>
+<button onclick="resetRoster()">Reset</button>
+</div>
+<div class="sheet">
+<h2 contenteditable="true">Khidmah Hospital Ltd.</h2>
+<p contenteditable="true">C-287/2-3, Khilgaon Bishwaroad, Dhaka-1219</p>
+<h3>Nurses Roster month of <span id="monthTitle">Nov 2026</span></h3>
+<table id="roster"><thead><tr id="head1"><th class="sl" rowspan="2">SL</th><th class="staff" rowspan="2">Name Of Staff</th><th colspan="31">Day</th></tr><tr id="head2"></tr></thead><tbody></tbody></table>
+<div class="note" contenteditable="true">Special Note : M= 8AM to 3PM　 E=3PM to 10PM　 N=10PM to 8AM　 6=6th floor　 7=7th floor</div>
+<div class="signs"><span>Submitted By</span><span>DM</span><span>HRD</span></div>
+</div>
+<script>
+const names=["SIRAZ","ALOMGIR","DIDAR","ABDULLAH","AZIM","MUZAMMEL","ARIF","MAMUN","BADSHA","SAZZAD"];
+const codes=["OFF","M6","M7","E6","E7","N6","N7"];
+const bnDays=["sun","mon","tue","wed","thu","fri","sat"];
+let data={};
+function key(){return document.getElementById('month').value}
+function draw(){
+ const val=key(); if(!val)return; const [y,m]=val.split('-').map(Number),days=new Date(y,m,0).getDate();
+ document.getElementById('monthTitle').textContent=new Date(y,m-1,1).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+ const h1=document.getElementById('head1');h1.querySelector('th[colspan]')?.setAttribute('colspan',days);
+ const h2=document.getElementById('head2');h2.innerHTML='';
+ for(let d=1;d<=days;d++){let date=new Date(y,m-1,d);let th=document.createElement('th');th.innerHTML=`<div>${bnDays[date.getDay()]}</div><div>${d}</div>`;h2.appendChild(th)}
+ const body=document.querySelector('#roster tbody');body.innerHTML='';
+ const staff=data[val]?.names||names;
+ staff.forEach((name,i)=>{let tr=document.createElement('tr');tr.innerHTML=`<td class="sl">${i+1}</td><td class="staff" contenteditable="true">${escapeHtml(name)}</td>`;
+ for(let d=1;d<=days;d++){let td=document.createElement('td');td.className='duty';td.tabIndex=0;td.dataset.staff=i;td.dataset.day=d;td.textContent=data[val]?.duties?.[i+'-'+d]||'';td.title='Tap করে duty নির্বাচন করুন';td.onclick=()=>choose(td);tr.appendChild(td)}body.appendChild(tr)});
+}
+function choose(td){let current=td.textContent;let next=prompt('ডিউটি কোড লিখুন: OFF, M6, M7, E6, E7, N6, N7',current||'M6');if(next===null)return;next=next.trim().toUpperCase();if(next&&!codes.includes(next)){alert('কোডটি তালিকায় নেই।');return}td.textContent=next;storeMemory()}
+function storeMemory(){let val=key(),rows=[...document.querySelectorAll('#roster tbody tr')],staff=rows.map(r=>r.querySelector('.staff').textContent.trim()),duties={};rows.forEach((r,i)=>r.querySelectorAll('.duty').forEach(td=>{if(td.textContent.trim())duties[i+'-'+td.dataset.day]=td.textContent.trim()}));data[val]={names:staff,duties}}
+function saveRoster(){storeMemory();try{localStorage.setItem('dutyRosterData',JSON.stringify(data));alert('এই মোবাইল/ব্রাউজারে রোস্টার সংরক্ষণ হয়েছে।')}catch(e){alert('Save করা যায়নি')}}
+function resetRoster(){if(confirm('এই মাসের রোস্টার খালি করবেন?')){data[key()]={names:[...names],duties:{}};draw();saveRoster()}}
+function addStaff(){let n=prompt('স্টাফের নাম লিখুন');if(!n)return;storeMemory();data[key()].names.push(n);draw()}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.getElementById('month').addEventListener('change',()=>{storeMemory();draw()});
+try{data=JSON.parse(localStorage.getItem('dutyRosterData')||'{}')}catch(e){data={}}
+draw();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+ window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(console.error));
+}
+</script></body></html>

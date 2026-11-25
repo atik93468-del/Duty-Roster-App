@@ -1,0 +1,1 @@
+Duty Roster PWA package. GitHub Pages এ প্রকাশের পর Chrome menu > Install app/Add to Home screen. Firebase cloud sync এখনো যুক্ত হয়নি; Save স্থানীয় ব্রাউজারে থাকে। APK করতে Android wrapper build লাগবে।
